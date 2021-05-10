@@ -75,3 +75,14 @@ guint		 fu_smbios_get_integer		(FuSmbios	*self,
 GBytes		*fu_smbios_get_data		(FuSmbios	*self,
 						 guint8		 type,
 						 GError		**error);
+
+/*
+typedef struct {
+	unsigned int l;
+	unsigned int h;
+} u64;
+
+#define WORD(x) (unsigned short)(*(const unsigned short *)(x))
+#define DWORD(x) (unsigned int)(*(const unsigned int *)(x))
+#define QWORD(x) (*(const u64 *)(x))
+*/

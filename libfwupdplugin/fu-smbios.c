@@ -89,6 +89,98 @@ fu_smbios_convert_dt_string (FuSmbios *self, guint8 type, guint8 offset,
 	fu_smbios_convert_dt_value (self, type, offset, item->strings->len);
 }
 
+/*
+static gboolean
+smbios3_decode (unsigned char *buf,  const gchar *path, unsigned int flags)
+{
+	unsigned int ver;
+	u64 offset;
+
+	g_return_val_if_fail (buf[0x06] > 0x20, FALSE);
+
+
+	ver = (buf[0x07] << 16) + (buf[0x08] << 8) + buf[0x09];
+	g_debug ("SMBIOS %u.%u.%u present.", buf[0x07], buf[0x08], buf[0x09]);
+
+	offset = QWORD (buf + 0x10);
+	if (offset.h && sizeof(off_t) < 8) {
+		g_warning ("64-bit addresses not supported, sorry.")
+		return FALSE;
+	}
+
+	dmi_table(((off_t)offset.h << 32) | offset.l,
+		  DWORD (buf + 0x0C), 0, ver, path, flags | FLAG_STOP_AT_EOT);
+
+	return TRUE;
+}
+*/
+
+static gboolean
+fu_smbios_setup_from_path_mem (FuSmbiosItem *self, const gchar *path,
+	GError **error)
+{
+	int found = 0;
+	unsigned char *buf = NULL;
+	off_t fp;
+
+	g_return_val_if_fail (FU_IS_SMBIOS (self), NULL);
+	g_return_val_if_fail (error == NULL || *error == NULL, NULL);
+
+	g_debug ("Scanning %s for entry point.", path);
+	if ((buf = mem_chunk(0xF0000, 0x10000, path)) == NULL)
+	{
+		g_warning("Wrong entry point.");
+		return FALSE;
+	}
+
+	/* Look for a 64-bit entry point first */
+	for (fp = 0; fp <= 0xFFE0; fp += 16)
+	{
+		if (memcmp (buf + fp, "_SM3_", 5) == 0)
+		{
+			g_warning ("SMBIOS3");
+			return FALSE;
+			/*
+			if (smbios3_decode (buf + fp, path, 0))
+			{
+				found++;
+			}
+			*/
+		}
+	}
+
+	/* If none found, look for a 32-bit entry point */
+	for (fp = 0; fp <= 0xFFF0; fp += 16)
+	{
+		if (memcmp (buf + fp, "_SM_", 4) == 0 && fp <= 0xFFE0)
+		{
+			g_warning ("SMBIOS");
+			return FALSE;
+			/*
+			if (smbios_decode (buf + fp, path, 0))
+			{
+				found++;
+			}
+			*/
+		}
+		else if (memcmp (buf + fp, "_DMI_", 5) == 0)
+		{
+			g_warning ("LEGACY");
+			return FALSE;
+			/*
+			if (legacy_decode (buf + fp, path, 0))
+			{
+				found++;
+			}
+			*/
+		}
+	}
+
+	g_return_val_if_fail (found != 0, FALSE);
+
+	return TRUE;
+}
+
 static gboolean
 fu_smbios_setup_from_path_dt (FuSmbios *self, const gchar *path, GError **error)
 {
@@ -433,6 +525,8 @@ fu_smbios_setup_from_path (FuSmbios *self, const gchar *path, GError **error)
 	basename = g_path_get_basename (path);
 	if (g_strcmp0 (basename, "base") == 0)
 		return fu_smbios_setup_from_path_dt (self, path, error);
+	else if (g_strcmp0 (basename, "mem") == 0)
+		return fu_smbios_setup_from_path_mem (self, path, error);
 	return fu_smbios_setup_from_path_dmi (self, path, error);
 }
 
@@ -452,6 +546,7 @@ fu_smbios_setup (FuSmbios *self, GError **error)
 {
 	g_autofree gchar *path = NULL;
 	g_autofree gchar *path_dt = NULL;
+	g_autofree gchar *path_mem = NULL;
 	g_autofree gchar *sysfsfwdir = NULL;
 
 	g_return_val_if_fail (FU_IS_SMBIOS (self), FALSE);
@@ -468,6 +563,11 @@ fu_smbios_setup (FuSmbios *self, GError **error)
 	path_dt = g_build_filename (sysfsfwdir, "devicetree", "base", NULL);
 	if (g_file_test (path_dt, G_FILE_TEST_EXISTS))
 		return fu_smbios_setup_from_path (self, path_dt, error);
+
+	/* /dev/mem */
+	path_mem = g_build_filename ("dev", "mem", NULL);
+	if (g_file_test (path_mem, G_FILE_TEST_EXISTS))
+		return fu_smbios_setup_from_path (self, path_mem, error);
 
 	/* neither found */
 	g_set_error_literal (error,
