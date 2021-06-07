@@ -91,8 +91,13 @@ static gboolean
 fu_uefi_backend_setup (FuBackend *backend, GError **error)
 {
 	g_autofree gchar *efi_ver = fu_kenv_get_string ("efi-version", error);
-	if (efi_ver == NULL)
+	if (efi_ver == NULL) {
+		g_set_error_literal (error,
+				     FWUPD_ERROR,
+				     FWUPD_ERROR_NOT_SUPPORTED,
+				     "System does not support UEFI mode, no efi-version kenv");
 		return FALSE;
+	}
 	if (fu_common_vercmp_full (efi_ver, "2.0.0.0", FWUPD_VERSION_FORMAT_QUAD) < 0) {
 		g_set_error (error,
 			     FWUPD_ERROR,
