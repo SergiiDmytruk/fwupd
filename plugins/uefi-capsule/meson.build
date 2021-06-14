@@ -19,6 +19,11 @@ else
   error('no ESRT support for @0@'.format(host_machine.system()))
 endif
 
+platform_deps = []
+if host_machine.system() == 'freebsd'
+  platform_deps += efivar
+endif
+
 shared_module('fu_plugin_uefi_capsule',
   fu_hash,
   sources : [
@@ -47,6 +52,7 @@ shared_module('fu_plugin_uefi_capsule',
   c_args : cargs,
   dependencies : [
     plugin_deps,
+    platform_deps,
     efiboot,
     tpm2tss,
   ],
@@ -75,6 +81,7 @@ fwupdate = executable(
   ],
   dependencies : [
     plugin_deps,
+    platform_deps,
     efiboot,
     tpm2tss,
   ],
@@ -156,6 +163,7 @@ if get_option('tests')
     ],
     dependencies : [
       plugin_deps,
+      platform_deps,
       efiboot,
       tpm2tss,
     ],
