@@ -32,7 +32,7 @@ if [ -z "$GITHUB_SHA" ] || [ -z "$GITHUB_REPOSITORY" ] || \
     exit 1
 fi
 
-set -e
+set -xe
 mkdir -p /usr/local/etc/pkg/repos/
 # Fix meson flag problem https://www.mail-archive.com/freebsd-ports@freebsd.org/msg86617.html
 cp /etc/pkg/FreeBSD.conf /usr/local/etc/pkg/repos/FreeBSD.conf
