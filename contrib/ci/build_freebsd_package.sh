@@ -52,9 +52,10 @@ sed -i .old "s/GH_TAGNAME=.*$/GH_TAGNAME=\t${GITHUB_SHA}/" Makefile
 sed -i .old "s/GH_ACCOUNT=.*$/GH_ACCOUNT=\t${GITHUB_REPOSITORY_OWNER}/" Makefile
 sed -i .old "s/DISTVERSION=.*$/DISTVERSION=\t${GITHUB_TAG}/" Makefile
 make makesum
+make clean
+make
 make makeplist > plist
 sed -i "" "1d" plist
-make clean
 make package
 make install
 cp /usr/ports/sysutils/fwupd/work/pkg/fwupd*.txz \
