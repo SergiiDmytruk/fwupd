@@ -169,6 +169,19 @@ fu_plugin_flashrom_coldplug(FuPlugin *plugin, GError **error)
 	return TRUE;
 }
 
+static void
+fu_plugin_flashrom_device_registered(FuPlugin *plugin, FuDevice *device)
+{
+	if (fu_device_get_metadata(device, FU_DEVICE_METADATA_UEFI_DEVICE_KIND) != NULL) {
+		if (fu_device_get_guid_default(device) == NULL) {
+			g_autofree gchar *dbg = fu_device_to_string(device);
+			g_warning("cannot create proxy device as no GUID: %s", dbg);
+			return;
+		}
+		fu_plugin_uefi_capsule_register_proxy_device(plugin, device);
+	}
+}
+
 static gboolean
 fu_plugin_flashrom_startup(FuPlugin *plugin, GError **error)
 {
@@ -188,6 +201,7 @@ fu_plugin_init_vfuncs(FuPluginVfuncs *vfuncs)
 {
 	vfuncs->build_hash = FU_BUILD_HASH;
 	vfuncs->init = fu_plugin_flashrom_init;
+    vfuncs->device_registered = fu_plugin_flashrom_device_registered;
 	vfuncs->startup = fu_plugin_flashrom_startup;
 	vfuncs->coldplug = fu_plugin_flashrom_coldplug;
 }

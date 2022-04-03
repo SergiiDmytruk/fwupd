@@ -25,6 +25,7 @@
 #define SIO_CMD_EC_READ_BLOCK	   0x03
 #define SIO_CMD_EC_ERASE_KBYTE	   0x05
 #define SIO_CMD_EC_WRITE_1ST_KBYTE 0x06
+#define SET_POWER_TIMER		   0x97
 #define EC_ROM_ACCESS_ON_1	   0xDE
 #define EC_ROM_ACCESS_ON_2	   0xDC
 #define EC_ROM_ACCESS_OFF	   0xFE
@@ -631,6 +632,43 @@ fu_superio_it55_device_finalize(GObject *obj)
 	G_OBJECT_CLASS(fu_superio_it55_device_parent_class)->finalize(obj);
 }
 
+static gboolean
+fu_superio_it55_device_unlock(FuPlugin *self, FuDevice *device, GError **error)
+{
+	// TODO: check whether ME is locked 
+
+	uint8_t data1, data2;
+
+	/* Set bit3 of WINF EC RAM (0xda) to assert FDOPPS strap */
+
+	do {
+		if (!fu_superio_device_reg_read(self, 0xda, &data1, error))
+			return FALSE;
+		g_usleep(300 * 1000);
+		if (!fu_superio_device_reg_read(self, 0xda, &data2, error))
+			return FALSE;
+	} while (data1 != data2);
+
+	ec_write_reg(0xda, data1 | 8, 0);
+
+	do {
+		g_usleep(300 * 1000);
+		if (!fu_superio_device_reg_read(self, 0xda, &data2, error))
+			return FALSE;
+	} while (data2 != (data1 | 8));
+
+	/* Program automatic power on after power off */
+	if (!fu_superio_device_ec_write_cmd(device, SET_POWER_TIMER, error))
+		return FALSE;
+	if (!fu_superio_device_ec_write_data(self, 0x00, error))
+		return FALSE;
+	/* 5 seconds in S5 state */
+	if (!fu_superio_device_ec_write_data(self, 0x05, error))
+		return FALSE;
+
+	return TRUE;
+}
+
 static void
 fu_superio_it55_device_class_init(FuEcIt55DeviceClass *klass)
 {
@@ -644,4 +682,5 @@ fu_superio_it55_device_class_init(FuEcIt55DeviceClass *klass)
 	klass_device->setup = fu_superio_it55_device_setup;
 	klass_device->prepare_firmware = fu_superio_it55_device_prepare_firmware;
 	klass_device->set_quirk_kv = fu_superio_it55_device_set_quirk_kv;
+	klass_device->unlock = fu_superio_it55_device_unlock;
 }
