@@ -358,6 +358,11 @@ fu_intel_spi_device_setup(FuDevice *device, GError **error)
 		fu_device_add_child(device, child);
 	}
 
+	// TODO: we need a quirk for SPI BARS in out laptops 
+
+	/* publish HSFS value for anyone else to use */
+	fu_device_set_metadata_integer(device, FU_DEVICE_METADATA_INTEL_SPI_HSFS, self->hsfs);
+
 	return TRUE;
 }
 

@@ -43,3 +43,11 @@
  * need to be handled as a capsule update.
  */
 #define FU_DEVICE_METADATA_UEFI_CAPSULE_FLAGS "UefiCapsuleFlags"
+
+/**
+ * FU_DEVICE_METADATA_INTEL_SPI_HSFS:
+ *
+ * HSFS value from Intel Flash Descriptor.
+ * Consumed by any plugin that might need access to this information.
+ */
+#define FU_DEVICE_METADATA_INTEL_SPI_HSFS "IntelSpiHsfs"

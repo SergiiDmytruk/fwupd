@@ -114,10 +114,22 @@ fu_plugin_superio_coldplug(FuPlugin *plugin, GError **error)
 	return TRUE;
 }
 
+static gboolean
+fu_plugin_superio_unlock(FuPlugin *self, FuDevice *device, GError **error)
+{
+	if (fu_device_get_specialized_gtype(device) == FU_TYPE_EC_IT55_DEVICE) {
+		FuEcIt55Device *ecit55_dev = FU_SUPERIO_IT55_DEVICE(device);
+		return fu_superio_it55_device_unlock(ecit55_dev, error);
+	}
+
+	return TRUE;
+}
+
 void
 fu_plugin_init_vfuncs(FuPluginVfuncs *vfuncs)
 {
 	vfuncs->build_hash = FU_BUILD_HASH;
 	vfuncs->init = fu_plugin_superio_init;
 	vfuncs->coldplug = fu_plugin_superio_coldplug;
+	vfuncs->unlock = fu_plugin_superio_unlock;
 }

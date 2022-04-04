@@ -8,6 +8,7 @@
 
 #include <fwupdplugin.h>
 
+#include <stdint.h>
 #include <string.h>
 
 #include "fu-superio-common.h"
@@ -619,7 +620,6 @@ fu_superio_it55_device_init(FuEcIt55Device *self)
 	fu_device_add_flag(FU_DEVICE(self), FWUPD_DEVICE_FLAG_ONLY_OFFLINE);
 	fu_device_add_flag(FU_DEVICE(self), FWUPD_DEVICE_FLAG_REQUIRE_AC);
 	fu_device_add_flag(FU_DEVICE(self), FWUPD_DEVICE_FLAG_NEEDS_REBOOT);
-	fu_device_add_flag(FU_DEVICE(self), FWUPD_DEVICE_FLAG_REQUIRE_AC);
 	/* version string example: 1.07.02TR1 */
 	fu_device_set_version_format(FU_DEVICE(self), FWUPD_VERSION_FORMAT_PLAIN);
 }
@@ -630,43 +630,6 @@ fu_superio_it55_device_finalize(GObject *obj)
 	FuEcIt55Device *self = FU_SUPERIO_IT55_DEVICE(obj);
 	g_free(self->prj_name);
 	G_OBJECT_CLASS(fu_superio_it55_device_parent_class)->finalize(obj);
-}
-
-static gboolean
-fu_superio_it55_device_unlock(FuPlugin *self, FuDevice *device, GError **error)
-{
-	// TODO: check whether ME is locked 
-
-	uint8_t data1, data2;
-
-	/* Set bit3 of WINF EC RAM (0xda) to assert FDOPPS strap */
-
-	do {
-		if (!fu_superio_device_reg_read(self, 0xda, &data1, error))
-			return FALSE;
-		g_usleep(300 * 1000);
-		if (!fu_superio_device_reg_read(self, 0xda, &data2, error))
-			return FALSE;
-	} while (data1 != data2);
-
-	ec_write_reg(0xda, data1 | 8, 0);
-
-	do {
-		g_usleep(300 * 1000);
-		if (!fu_superio_device_reg_read(self, 0xda, &data2, error))
-			return FALSE;
-	} while (data2 != (data1 | 8));
-
-	/* Program automatic power on after power off */
-	if (!fu_superio_device_ec_write_cmd(device, SET_POWER_TIMER, error))
-		return FALSE;
-	if (!fu_superio_device_ec_write_data(self, 0x00, error))
-		return FALSE;
-	/* 5 seconds in S5 state */
-	if (!fu_superio_device_ec_write_data(self, 0x05, error))
-		return FALSE;
-
-	return TRUE;
 }
 
 static void
@@ -682,5 +645,51 @@ fu_superio_it55_device_class_init(FuEcIt55DeviceClass *klass)
 	klass_device->setup = fu_superio_it55_device_setup;
 	klass_device->prepare_firmware = fu_superio_it55_device_prepare_firmware;
 	klass_device->set_quirk_kv = fu_superio_it55_device_set_quirk_kv;
-	klass_device->unlock = fu_superio_it55_device_unlock;
+}
+
+gboolean
+fu_superio_it55_device_unlock(FuEcIt55Device *self, GError **error)
+{
+	// TODO: check whether ME is locked 
+
+	/* guint hsfs; */
+	uint8_t data1, data2;
+
+	FuSuperioDevice *sio_dev = FU_SUPERIO_DEVICE(self);
+
+	/* hsfs = fu_device_get_metadata_integer(FU_DEVICE(self), FU_DEVICE_METADATA_INTEL_SPI_HSFS); */
+	/* if (hsfs */
+
+	/* Set bit3 of WINF EC RAM (0xda) to assert FDOPPS strap */
+
+	do {
+		if (!fu_superio_device_reg_read(sio_dev, 0xda, &data1, error))
+			return FALSE;
+		g_usleep(300 * 1000);
+		if (!fu_superio_device_reg_read(sio_dev, 0xda, &data2, error))
+			return FALSE;
+	} while (data1 != data2);
+
+	if (!fu_superio_device_reg_write(sio_dev, 0xda, data1 | 8, error))
+		return FALSE;
+
+	do {
+		g_usleep(300 * 1000);
+		if (!fu_superio_device_reg_read(sio_dev, 0xda, &data2, error))
+			return FALSE;
+	} while (data2 != (data1 | 8));
+
+	/* Program automatic power on after power off */
+	if (!fu_superio_device_ec_write_cmd(sio_dev, SET_POWER_TIMER, error))
+		return FALSE;
+	if (!fu_superio_device_ec_write_data(sio_dev, 0x00, error))
+		return FALSE;
+	/* 5 seconds in S5 state */
+	if (!fu_superio_device_ec_write_data(sio_dev, 0x05, error))
+		return FALSE;
+
+	/* success */
+	fu_device_remove_flag(FU_DEVICE(self), FWUPD_DEVICE_FLAG_NEEDS_REBOOT);
+	fu_device_add_flag(FU_DEVICE(self), FWUPD_DEVICE_FLAG_NEEDS_SHUTDOWN);
+	return TRUE;
 }
