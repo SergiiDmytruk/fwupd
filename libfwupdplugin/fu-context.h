@@ -85,3 +85,8 @@ guint
 fu_context_get_battery_threshold(FuContext *self);
 void
 fu_context_set_battery_threshold(FuContext *self, guint battery_threshold);
+
+gboolean
+fu_context_get_me_lock_status(FuContext *self);
+void
+fu_context_set_me_lock_status(FuContext *self, gboolean locked);

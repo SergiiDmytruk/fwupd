@@ -32,6 +32,7 @@ typedef struct {
 	FuLidState lid_state;
 	guint battery_level;
 	guint battery_threshold;
+	gboolean me_locked;
 } FuContextPrivate;
 
 enum { SIGNAL_SECURITY_CHANGED, SIGNAL_LAST };
@@ -889,6 +890,20 @@ fu_context_class_init(FuContextClass *klass)
 	g_object_class_install_property(object_class, PROP_BATTERY_THRESHOLD, pspec);
 
 	/**
+	 * FuContext:me-locked:
+	 *
+	 * ME firmware update lock state.
+	 *
+	 * Since: 1.7.7
+	 */
+	pspec = g_param_spec_boolean("me-locked",
+				     NULL,
+				     NULL,
+				     FALSE,
+				     G_PARAM_READWRITE | G_PARAM_STATIC_NAME);
+	g_object_class_install_property(object_class, PROP_BATTERY_STATE, pspec);
+
+	/**
 	 * FuContext::security-changed:
 	 * @self: the #FuContext instance that emitted the signal
 	 *
@@ -938,4 +953,43 @@ FuContext *
 fu_context_new(void)
 {
 	return FU_CONTEXT(g_object_new(FU_TYPE_CONTEXT, NULL));
+}
+
+/**
+ * fu_context_get_me_lock_status:
+ * @self: a #FuContext
+ *
+ * Gets state of ME firmware update lock.
+ *
+ * Returns: %TRUE if ME can't be updated
+ *
+ * Since: 1.7.7
+ **/
+gboolean
+fu_context_get_me_lock_status(FuContext *self)
+{
+	FuContextPrivate *priv = GET_PRIVATE(self);
+	g_return_val_if_fail(FU_IS_CONTEXT(self), FALSE);
+	return priv->me_locked;
+}
+
+/**
+ * fu_context_set_me_lock_status:
+ * @self: a #FuContext
+ * @locked: value
+ *
+ * Sets state of ME firmware update lock.
+ *
+ * Since: 1.7.7
+ **/
+void
+fu_context_set_me_lock_status(FuContext *self, gboolean locked)
+{
+	FuContextPrivate *priv = GET_PRIVATE(self);
+	g_return_if_fail(FU_IS_CONTEXT(self));
+	if (priv->me_locked == locked)
+		return;
+	priv->me_locked = locked;
+	g_debug("new ME lock state is %s", locked ? "TRUE" : "FALSE");
+	g_object_notify(G_OBJECT(self), "me-locked");
 }

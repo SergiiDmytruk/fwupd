@@ -402,6 +402,10 @@ IntelSpiKind = pch400
 Plugin = intel_spi
 IntelSpiKind = pch400
 
+[PCI\VEN_8086&DEV_A082]
+Plugin = intel_spi
+IntelSpiKind = TODO_AND_CHECK_IDS 
+
 
 [INTEL_SPI_CHIPSET\ID_APL]
 IntelSpiBarProxy = 00:0d.2

@@ -43,6 +43,9 @@ struct _FuIntelSpiDevice {
 	guint32 protected_range[4];
 };
 
+#define HSFS_FDOPSS_OFF	13	/* 13: Flash Descriptor Override Pin-Strap Status */
+#define HSFS_FDV_OFF	14	/* 14: Flash Descriptor Valid */
+
 #define FU_INTEL_SPI_PHYS_SPIBAR_SIZE 0x10000 /* bytes */
 #define FU_INTEL_SPI_READ_TIMEOUT     10      /* ms */
 
@@ -303,6 +306,7 @@ fu_intel_spi_device_setup(FuDevice *device, GError **error)
 	guint64 total_size = 0;
 	guint8 comp1_density;
 	guint8 comp2_density;
+	gboolean me_is_locked;
 	guint16 reg_pr0 = fu_device_has_private_flag(device, FU_INTEL_SPI_DEVICE_FLAG_ICH)
 			      ? ICH9_REG_PR0
 			      : PCH100_REG_FPR0;
@@ -358,10 +362,10 @@ fu_intel_spi_device_setup(FuDevice *device, GError **error)
 		fu_device_add_child(device, child);
 	}
 
-	// TODO: we need a quirk for SPI BARS in out laptops 
-
 	/* publish HSFS value for anyone else to use */
-	fu_device_set_metadata_integer(device, FU_DEVICE_METADATA_INTEL_SPI_HSFS, self->hsfs);
+	me_is_locked = !(self->hsfs & (1 << HSFS_FDV_OFF))     /* assume locked if not valid */
+	             || (self->hsfs & (1 << HSFS_FDOPSS_OFF)); /* use status bit if valid */
+	fu_context_set_me_lock_status(fu_device_get_context(device), me_is_locked);
 
 	return TRUE;
 }

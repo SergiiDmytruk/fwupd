@@ -82,6 +82,7 @@ fu_plugin_superio_init(FuPlugin *plugin)
 	fu_plugin_add_device_gtype(plugin, FU_TYPE_SUPERIO_IT85_DEVICE);
 	fu_plugin_add_device_gtype(plugin, FU_TYPE_SUPERIO_IT89_DEVICE);
 	fu_plugin_add_rule(plugin, FU_PLUGIN_RULE_METADATA_SOURCE, "linux_lockdown");
+	fu_plugin_add_rule(plugin, FU_PLUGIN_RULE_RUN_AFTER, "intel_spi");
 	fu_context_add_quirk_key(ctx, "SuperioGType");
 	fu_context_add_quirk_key(ctx, "SuperioId");
 	fu_context_add_quirk_key(ctx, "SuperioPort");
